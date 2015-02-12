@@ -16,6 +16,9 @@
     "index.js",
     "lib/ES6ImportsRenamer.js"
   ],
+  "scripts": {
+    "test": "nodeunit test/test.js"
+  },
   "keywords": [
     "es6",
     "import",
