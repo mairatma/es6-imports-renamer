@@ -1,0 +1,30 @@
+{
+  "name": "es6-imports-renamer",
+  "version": "0.1.0",
+  "description": "Renames paths from es6 import declarations.",
+  "license": "MIT",
+  "repository": "mairatma/es6-imports-renamer",
+  "author": {
+    "name": "Maira Bello",
+    "email": "maira.araujo@liferay.com"
+  },
+  "engines": {
+    "node": ">=0.11.0"
+  },
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib/ES6ImportsRenamer.js"
+  ],
+  "keywords": [
+    "es6",
+    "import",
+    "module",
+    "rename"
+  ],
+  "dependencies": {
+    "promise": "^6.1.0",
+    "recast": "^0.9.18",
+    "systemjs": "^0.13.2"
+  }
+}
