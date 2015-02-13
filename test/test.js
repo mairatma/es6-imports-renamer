@@ -90,12 +90,14 @@ module.exports = {
 		renamer({sources: sources, basePath: basePath}, function(results) {
 			assert.strictEqual(3, results.length);
 			assert.strictEqual(bazFilePath, results[0].path);
-			assert.strictEqual(path.resolve(basePath, 'deps/dependency2/core.js'), results[1].path);
-			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[2].path);
+			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[1].path);
+			assert.strictEqual(path.resolve(basePath, 'deps/dependency2/core.js'), results[2].path);
 
 			var importSource = results[0].ast.program.body[0].source.value;
+			assert.strictEqual('deps/dependency1/core', importSource);
+			importSource = results[0].ast.program.body[1].source.value;
 			assert.strictEqual('deps/dependency2/core', importSource);
-			importSource = results[1].ast.program.body[0].source.value;
+			importSource = results[2].ast.program.body[0].source.value;
 			assert.strictEqual('deps/dependency1/core', importSource);
 
 			test.done();
