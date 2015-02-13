@@ -102,5 +102,33 @@ module.exports = {
 
 			test.done();
 		});
+	},
+
+	testRenameExportWithSource: function(test) {
+		var basePath = path.resolve('test/fixtures');
+		System.baseURL = basePath;
+		System.config({
+			paths: {
+				'*': '*.js',
+				'deps:*': 'deps/*.js'
+			},
+			map: {
+				'dependency1': 'deps:dependency1'
+			}
+		});
+
+		var exportFilePath = 'test/fixtures/src/export.js';
+		var exportAst = recast.parse(fs.readFileSync(exportFilePath, 'utf8'));
+		var sources = [{ast: exportAst, path: exportFilePath}];
+		renamer({sources: sources, basePath: basePath}, function(results) {
+			assert.strictEqual(2, results.length);
+			assert.strictEqual(exportFilePath, results[0].path);
+			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[1].path);
+
+			var body = results[0].ast.program.body;
+			assert.strictEqual('deps/dependency1/core', body[0].source.value);
+
+			test.done();
+		});
 	}
 };
