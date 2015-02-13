@@ -1,4 +1,4 @@
-es6-rename-imports
+es6-imports-renamer
 ===================================
 
 Renames paths from es6 import declarations.
