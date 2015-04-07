@@ -143,10 +143,10 @@ function normalizeSystemJs(originalPath, parentName, callback) {
 	System.normalize(originalPath, parentName).then(callback);
 }
 
-function renameSystemJs(normalized, callback) {
+function renameSystemJs(normalized, parentName, callback) {
 	System.locate({name: normalized}).then(function(filePath) {
 		// Removes `file:` prefix.
-		filePath = filePath.substr(5);
+		filePath = filePath.substring(5, filePath.length - 3);
 		callback(filePath);
 	});
 }
