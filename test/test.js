@@ -1,15 +1,17 @@
 var assert = require('assert');
 var fs = require('fs');
+var merge = require('merge');
 var path = require('path');
 var recast = require('recast');
 var renamer = require('../index');
+var System = require('systemjs');
 
 module.exports = {
 	testRenameLocal: function(test) {
 		var fooFilePath = 'test/fixtures/src/foo.js';
 		var fooAst = recast.parse(fs.readFileSync(fooFilePath, 'utf8'));
 		var sources = [{ast: fooAst, path: fooFilePath}];
-		renamer({sources: sources}, function(results) {
+		renamer(buildOptionsObj({sources: sources}), function(results) {
 			assert.strictEqual(2, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
 			assert.strictEqual(path.resolve('test/fixtures/src/bar.js'), results[1].path);
@@ -25,7 +27,7 @@ module.exports = {
 		var fooFilePath = 'test/fixtures/src/foo.js';
 		var fooAst = recast.parse(fs.readFileSync(fooFilePath, 'utf8'));
 		var sources = [{ast: fooAst, path: fooFilePath}];
-		renamer({sources: sources, basePath: path.resolve('test/fixtures')}, function(results) {
+		renamer(buildOptionsObj({sources: sources, basePath: path.resolve('test/fixtures')}), function(results) {
 			assert.strictEqual(2, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
 			assert.strictEqual(path.resolve('test/fixtures/src/bar.js'), results[1].path);
@@ -53,7 +55,7 @@ module.exports = {
 		var bazFilePath = 'test/fixtures/src/baz.js';
 		var bazAst = recast.parse(fs.readFileSync(bazFilePath, 'utf8'));
 		var sources = [{ast: bazAst, path: bazFilePath}];
-		renamer({sources: sources, basePath: basePath}, function(results) {
+		renamer(buildOptionsObj({sources: sources, basePath: basePath}), function(results) {
 			assert.strictEqual(3, results.length);
 			assert.strictEqual(bazFilePath, results[0].path);
 			assert.strictEqual(path.resolve(basePath, 'src/bar.js'), results[1].path);
@@ -87,7 +89,7 @@ module.exports = {
 		var bazFilePath = 'test/fixtures/src/baz2.js';
 		var bazAst = recast.parse(fs.readFileSync(bazFilePath, 'utf8'));
 		var sources = [{ast: bazAst, path: bazFilePath}];
-		renamer({sources: sources, basePath: basePath}, function(results) {
+		renamer(buildOptionsObj({sources: sources, basePath: basePath}), function(results) {
 			assert.strictEqual(3, results.length);
 			assert.strictEqual(bazFilePath, results[0].path);
 			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[1].path);
@@ -120,7 +122,7 @@ module.exports = {
 		var exportFilePath = 'test/fixtures/src/export.js';
 		var exportAst = recast.parse(fs.readFileSync(exportFilePath, 'utf8'));
 		var sources = [{ast: exportAst, path: exportFilePath}];
-		renamer({sources: sources, basePath: basePath}, function(results) {
+		renamer(buildOptionsObj({sources: sources, basePath: basePath}), function(results) {
 			assert.strictEqual(2, results.length);
 			assert.strictEqual(exportFilePath, results[0].path);
 			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[1].path);
@@ -132,3 +134,19 @@ module.exports = {
 		});
 	}
 };
+
+function buildOptionsObj(options) {
+	return merge({normalizeFn: normalizeSystemJs, renameFn: renameSystemJs}, options);
+}
+
+function normalizeSystemJs(originalPath, parentName, callback) {
+	System.normalize(originalPath, parentName).then(callback);
+}
+
+function renameSystemJs(normalized, callback) {
+	System.locate({name: normalized}).then(function(filePath) {
+		// Removes `file:` prefix.
+		filePath = filePath.substr(5);
+		callback(filePath);
+	});
+}
