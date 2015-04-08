@@ -16,12 +16,12 @@ var recast = require('recast');
 var renamer = require('es6-imports-renamer');
 
 function renameFn(originalPath, parentPath, callback) {
-	callback(path.join(originalPath, 'index'));
+	callback(null, path.join(originalPath, 'index'));
 }
 
 var ast = recast.parse(fs.readFileSync('src/main'));
 var options = {renameFn: renameFn, sources: [{ast: ast, path: 'src/main'}]};
-renamer(options, function(resultAsts) {
+renamer(options, function(error, resultAsts) {
 	// Consume the renamed asts here.
 });
 ```
@@ -34,7 +34,7 @@ The renamer will automatically load other needed dependencies and rename them as
 
 - `basePath` **{string=}** Optional base path. If given, import sources will be renamed relative to it. Otherwise they will be renamed to absolute paths.
 - `renameDependencies` **{boolean=}** Optional flag that indicates if dependencies declared on imports but not passed as sources should also be renamed. If so, the resulting asts for these dependencies will also be in the results array passed to `renameFn`.
-- `renameFn` **{!function(!Array)}** The function to be used for renaming import sources. Receives an array with the resulting asts.
+- `renameFn` **{!function(Error, !Array)}** The function to be used for renaming import sources. This function receives an error object as the first argument, or null if none was thrown. The second argument is an array with the resulting asts.
 - `sources` **{!Array<{ast: !Object, path: string}>}** Contains the files that should start the renaming process. Each file should be represented as an object that points to that file's ast and its path.
 
 ### callback
