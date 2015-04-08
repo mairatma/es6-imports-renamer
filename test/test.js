@@ -1,6 +1,5 @@
 var assert = require('assert');
 var fs = require('fs');
-var merge = require('merge');
 var path = require('path');
 var recast = require('recast');
 var renamer = require('../index');
