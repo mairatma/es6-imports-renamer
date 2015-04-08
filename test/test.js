@@ -4,7 +4,6 @@ var merge = require('merge');
 var path = require('path');
 var recast = require('recast');
 var renamer = require('../index');
-var System = require('systemjs');
 
 module.exports = {
 	testRename: function(test) {

@@ -27,8 +27,7 @@
   ],
   "dependencies": {
     "promise": "^6.1.0",
-    "recast": "^0.9.18",
-    "systemjs": "^0.13.2"
+    "recast": "^0.9.18"
   },
   "devDependencies": {
     "merge": "^1.2.0"
