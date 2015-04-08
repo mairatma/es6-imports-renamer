@@ -1,6 +1,6 @@
 {
   "name": "es6-imports-renamer",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Renames paths from es6 import declarations.",
   "license": "MIT",
   "repository": "mairatma/es6-imports-renamer",
