@@ -9,7 +9,8 @@ module.exports = {
 		var fooFilePath = 'test/fixtures/src/foo.js';
 		var fooAst = recast.parse(fs.readFileSync(fooFilePath, 'utf8'));
 		var sources = [{ast: fooAst, path: fooFilePath}];
-		renamer({renameFn: simpleRenameFn, sources: sources}, function(results) {
+		renamer({renameFn: simpleRenameFn, sources: sources}, function(err, results) {
+			assert.ok(!err);
 			assert.strictEqual(1, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
 
@@ -31,7 +32,8 @@ module.exports = {
 			sources: sources,
 			basePath: path.resolve('test/fixtures')
 		};
-		renamer(options, function(results) {
+		renamer(options, function(err, results) {
+			assert.ok(!err);
 			assert.strictEqual(1, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
 
@@ -51,7 +53,8 @@ module.exports = {
 			renameFn: simpleRenameFn,
 			sources: sources
 		};
-		renamer(options, function(results) {
+		renamer(options, function(err, results) {
+			assert.ok(!err);
 			assert.strictEqual(4, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
 			assert.strictEqual(path.resolve('test/fixtures/src/bar.js'), results[1].path);
@@ -82,7 +85,8 @@ module.exports = {
 			renameFn: simpleRenameFn,
 			sources: sources
 		};
-		renamer(options, function(results) {
+		renamer(options, function(err, results) {
+			assert.ok(!err);
 			assert.strictEqual(1, results.length);
 			assert.strictEqual(exportFilePath, results[0].path);
 
@@ -91,15 +95,67 @@ module.exports = {
 
 			test.done();
 		});
+	},
+
+	testWithBrokenRenameFn: function(test) {
+		var filePath = 'test/fixtures/src/foo.js';
+		var ast = recast.parse(fs.readFileSync(filePath, 'utf8'));
+		var sources = [{ast: ast, path: filePath}];
+		var options = {
+			renameDependencies: true,
+			renameFn: function() {
+				throw new Error();
+			},
+			sources: sources
+		};
+		renamer(options, function(err, results) {
+			assert.ok(err);
+			test.done();
+		});
+	},
+
+	testWithErrorAwareRenameFn: function(test) {
+		var filePath = 'test/fixtures/src/foo.js';
+		var ast = recast.parse(fs.readFileSync(filePath, 'utf8'));
+		var sources = [{ast: ast, path: filePath}];
+		var options = {
+			renameDependencies: true,
+			renameFn: function(originalPath, parentPath, callback) {
+				callback(new Error());
+			},
+			sources: sources
+		};
+		renamer(options, function(err, results) {
+			assert.ok(err);
+			test.done();
+		});
+	},
+
+	testInvalidPath: function(test) {
+		var filePath = 'test/fixtures/src/invalid.js';
+		var ast = recast.parse(fs.readFileSync(filePath, 'utf8'));
+		var sources = [{ast: ast, path: filePath}];
+		var options = {
+			renameDependencies: true,
+			renameFn: simpleRenameFn,
+			sources: sources
+		};
+		renamer(options, function(err, results) {
+			assert.ok(err);
+
+			test.done();
+		});
 	}
 };
 
 function simpleRenameFn(originalPath, parentPath, callback) {
-	var renamed;
-	if (originalPath[0] === '.') {
-		renamed = path.resolve(path.dirname(parentPath), originalPath);
-	} else {
-		renamed = path.resolve('test/fixtures/deps', originalPath);
-	}
-	callback(renamed);
+	setTimeout(function() {
+		var renamed;
+		if (originalPath[0] === '.') {
+			renamed = path.resolve(path.dirname(parentPath), originalPath);
+		} else {
+			renamed = path.resolve('test/fixtures/deps', originalPath);
+		}
+		callback(null, renamed);
+	}, 0);
 }
