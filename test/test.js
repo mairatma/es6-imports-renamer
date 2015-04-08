@@ -7,17 +7,18 @@ var renamer = require('../index');
 var System = require('systemjs');
 
 module.exports = {
-	testRenameLocal: function(test) {
+	testRename: function(test) {
 		var fooFilePath = 'test/fixtures/src/foo.js';
 		var fooAst = recast.parse(fs.readFileSync(fooFilePath, 'utf8'));
 		var sources = [{ast: fooAst, path: fooFilePath}];
-		renamer(buildOptionsObj({sources: sources}), function(results) {
-			assert.strictEqual(2, results.length);
+		renamer({renameFn: simpleRenameFn, sources: sources}, function(results) {
+			assert.strictEqual(1, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
-			assert.strictEqual(path.resolve('test/fixtures/src/bar.js'), results[1].path);
 
 			var importSource = results[0].ast.program.body[0].source.value;
 			assert.strictEqual(path.resolve('test/fixtures/src/bar'), importSource);
+			importSource = results[0].ast.program.body[1].source.value;
+			assert.strictEqual(path.resolve('test/fixtures/deps/dependency1/core'), importSource);
 
 			test.done();
 		});
@@ -27,80 +28,46 @@ module.exports = {
 		var fooFilePath = 'test/fixtures/src/foo.js';
 		var fooAst = recast.parse(fs.readFileSync(fooFilePath, 'utf8'));
 		var sources = [{ast: fooAst, path: fooFilePath}];
-		renamer(buildOptionsObj({sources: sources, basePath: path.resolve('test/fixtures')}), function(results) {
-			assert.strictEqual(2, results.length);
+		var options = {
+			renameFn: simpleRenameFn,
+			sources: sources,
+			basePath: path.resolve('test/fixtures')
+		};
+		renamer(options, function(results) {
+			assert.strictEqual(1, results.length);
 			assert.strictEqual(fooFilePath, results[0].path);
-			assert.strictEqual(path.resolve('test/fixtures/src/bar.js'), results[1].path);
 
 			assert.strictEqual('src/bar', results[0].ast.program.body[0].source.value);
+			assert.strictEqual('deps/dependency1/core', results[0].ast.program.body[1].source.value);
 
 			test.done();
 		});
 	},
 
-	testRenameAccordingToConfig: function(test) {
-		var basePath = path.resolve('test/fixtures');
-		System.baseURL = basePath;
-		System.config({
-			paths: {
-				'*': '*.js',
-				'my-fixtures/*': 'src/*.js',
-				'deps:*': 'deps/*.js'
-			},
-			map: {
-				'dependency1': 'deps:dependency1'
-			}
-		});
-
-		var bazFilePath = 'test/fixtures/src/baz.js';
-		var bazAst = recast.parse(fs.readFileSync(bazFilePath, 'utf8'));
-		var sources = [{ast: bazAst, path: bazFilePath}];
-		renamer(buildOptionsObj({sources: sources, basePath: basePath}), function(results) {
-			assert.strictEqual(3, results.length);
-			assert.strictEqual(bazFilePath, results[0].path);
-			assert.strictEqual(path.resolve(basePath, 'src/bar.js'), results[1].path);
-			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[2].path);
-
-			var body = results[0].ast.program.body;
-			assert.strictEqual('src/bar', body[0].source.value);
-			assert.strictEqual('deps/dependency1/core', body[1].source.value);
-
-			test.done();
-		});
-	},
-
-	testRenameNestedDependency: function(test) {
-		var basePath = path.resolve('test/fixtures');
-		System.baseURL = basePath;
-		System.config({
-			paths: {
-				'*': '*.js',
-				'deps:*': 'deps/*.js'
-			},
-			map: {
-				'dependency1': 'deps:dependency1',
-				'dependency2': 'deps:dependency2',
-				'deps:dependency2': {
-					'dep1': 'deps:dependency1'
-				}
-			}
-		});
-
-		var bazFilePath = 'test/fixtures/src/baz2.js';
-		var bazAst = recast.parse(fs.readFileSync(bazFilePath, 'utf8'));
-		var sources = [{ast: bazAst, path: bazFilePath}];
-		renamer(buildOptionsObj({sources: sources, basePath: basePath}), function(results) {
-			assert.strictEqual(3, results.length);
-			assert.strictEqual(bazFilePath, results[0].path);
-			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[1].path);
-			assert.strictEqual(path.resolve(basePath, 'deps/dependency2/core.js'), results[2].path);
+	testRenameDependencies: function(test) {
+		var fooFilePath = 'test/fixtures/src/foo.js';
+		var fooAst = recast.parse(fs.readFileSync(fooFilePath, 'utf8'));
+		var sources = [{ast: fooAst, path: fooFilePath}];
+		var options = {
+			renameDependencies: true,
+			renameFn: simpleRenameFn,
+			sources: sources
+		};
+		renamer(options, function(results) {
+			assert.strictEqual(4, results.length);
+			assert.strictEqual(fooFilePath, results[0].path);
+			assert.strictEqual(path.resolve('test/fixtures/src/bar.js'), results[1].path);
+			assert.strictEqual(path.resolve('test/fixtures/deps/dependency1/core.js'), results[2].path);
+			assert.strictEqual(path.resolve('test/fixtures/deps/dependency2/core.js'), results[3].path);
 
 			var importSource = results[0].ast.program.body[0].source.value;
-			assert.strictEqual('deps/dependency1/core', importSource);
+			assert.strictEqual(path.resolve('test/fixtures/src/bar'), importSource);
 			importSource = results[0].ast.program.body[1].source.value;
-			assert.strictEqual('deps/dependency2/core', importSource);
-			importSource = results[2].ast.program.body[0].source.value;
-			assert.strictEqual('deps/dependency1/core', importSource);
+			assert.strictEqual(path.resolve('test/fixtures/deps/dependency1/core'), importSource);
+			importSource = results[1].ast.program.body[0].source.value;
+			assert.strictEqual(path.resolve('test/fixtures/deps/dependency2/core'), importSource);
+			importSource = results[3].ast.program.body[0].source.value;
+			assert.strictEqual(path.resolve('test/fixtures/deps/dependency1/core'), importSource);
 
 			test.done();
 		});
@@ -108,24 +75,18 @@ module.exports = {
 
 	testRenameExportWithSource: function(test) {
 		var basePath = path.resolve('test/fixtures');
-		System.baseURL = basePath;
-		System.config({
-			paths: {
-				'*': '*.js',
-				'deps:*': 'deps/*.js'
-			},
-			map: {
-				'dependency1': 'deps:dependency1'
-			}
-		});
 
 		var exportFilePath = 'test/fixtures/src/export.js';
 		var exportAst = recast.parse(fs.readFileSync(exportFilePath, 'utf8'));
 		var sources = [{ast: exportAst, path: exportFilePath}];
-		renamer(buildOptionsObj({sources: sources, basePath: basePath}), function(results) {
-			assert.strictEqual(2, results.length);
+		var options = {
+			basePath: basePath,
+			renameFn: simpleRenameFn,
+			sources: sources
+		};
+		renamer(options, function(results) {
+			assert.strictEqual(1, results.length);
 			assert.strictEqual(exportFilePath, results[0].path);
-			assert.strictEqual(path.resolve(basePath, 'deps/dependency1/core.js'), results[1].path);
 
 			var body = results[0].ast.program.body;
 			assert.strictEqual('deps/dependency1/core', body[0].source.value);
@@ -135,22 +96,12 @@ module.exports = {
 	}
 };
 
-function buildOptionsObj(options) {
-	return merge({
-		normalizeFn: normalizeSystemJs,
-		renameDependencies: true,
-		renameFn: renameSystemJs
-	}, options);
-}
-
-function normalizeSystemJs(originalPath, parentName, callback) {
-	System.normalize(originalPath, parentName).then(callback);
-}
-
-function renameSystemJs(normalized, parentName, callback) {
-	System.locate({name: normalized}).then(function(filePath) {
-		// Removes `file:` prefix.
-		filePath = filePath.substring(5, filePath.length - 3);
-		callback(filePath);
-	});
+function simpleRenameFn(originalPath, parentPath, callback) {
+	var renamed;
+	if (originalPath[0] === '.') {
+		renamed = path.resolve(path.dirname(parentPath), originalPath);
+	} else {
+		renamed = path.resolve('test/fixtures/deps', originalPath);
+	}
+	callback(renamed);
 }
