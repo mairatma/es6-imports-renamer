@@ -136,7 +136,11 @@ module.exports = {
 };
 
 function buildOptionsObj(options) {
-	return merge({normalizeFn: normalizeSystemJs, renameFn: renameSystemJs}, options);
+	return merge({
+		normalizeFn: normalizeSystemJs,
+		renameDependencies: true,
+		renameFn: renameSystemJs
+	}, options);
 }
 
 function normalizeSystemJs(originalPath, parentName, callback) {
